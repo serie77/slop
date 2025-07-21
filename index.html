@@ -631,7 +631,7 @@
         
         <!-- Social Links -->
         <div class="entrance-social-links">
-            <a href="https://x.com" target="_blank" class="entrance-social-btn" style="--delay: 0s;" title="X (Twitter)">𝕏</a>
+            <a href="https://x.com/sloponSOL" target="_blank" class="entrance-social-btn" style="--delay: 0s;" title="X (Twitter)">𝕏</a>
             <a href="https://x.com" target="_blank" class="entrance-social-btn" style="--delay: 0.5s;" title="X Community">👥</a>
         </div>
         
@@ -668,7 +668,7 @@
                 </div>
                 
                 <div class="social-links">
-                    <a href="https://x.com" target="_blank" class="social-btn" title="X (Twitter)">𝕏</a>
+                    <a href="https://x.com/sloponSOL" target="_blank" class="social-btn" title="X (Twitter)">𝕏</a>
                     <a href="https://x.com" target="_blank" class="social-btn" title="X Community">👥</a>
                 </div>
             </div>
@@ -727,10 +727,13 @@
             'SLOP/pwease.png'
         ];
 
-        // Preload all images
+        // Preload images faster with parallel loading
+        // Optimizations:
+        // 1. Uses Promise.all for true parallel loading
+        // 2. Shows flying images after first 5 load
+        // 3. Doesn't block on failed images
         function preloadImages(callback) {
             let loadedCount = 0;
-            const totalImages = memeImages.length;
             
             // Update progress
             function updateProgress() {
@@ -742,34 +745,56 @@
                 }
             }
             
-            memeImages.forEach(src => {
-                const img = new Image();
-                img.onload = () => {
-                    loadedCount++;
-                    updateProgress();
-                    if (loadedCount === totalImages) {
-                        callback();
-                    }
-                };
-                img.onerror = () => {
-                    loadedCount++;
-                    console.warn(`Failed to load image: ${src}`);
-                    updateProgress();
-                    if (loadedCount === totalImages) {
-                        callback();
-                    }
-                };
-                img.src = src;
+            // Only preload a subset for faster loading (we show 12 at a time)
+            const imagesToPreload = memeImages.slice(0, 15); // Preload 15 for variety
+            const totalImages = imagesToPreload.length;
+            
+            // Create promises for selected images
+            const imagePromises = imagesToPreload.map(src => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        loadedCount++;
+                        loadedImages.push(src);
+                        updateProgress();
+                        
+                        // Start showing images after first batch loads
+                        if (loadedCount === 5 && document.getElementById('flyingImages').children.length === 0) {
+                            createFlyingImages();
+                        }
+                        
+                        resolve();
+                    };
+                    img.onerror = () => {
+                        loadedCount++;
+                        console.warn(`Failed to load image: ${src}`);
+                        updateProgress();
+                        resolve(); // Resolve even on error to continue
+                    };
+                    // Start loading immediately
+                    img.src = src;
+                });
             });
             
             // Show initial progress
             updateProgress();
+            
+            // Wait for all images to load/fail
+            Promise.all(imagePromises).then(() => {
+                callback();
+            });
         }
+
+        // Track loaded images
+        const loadedImages = [];
 
         // Create flying images
         function createFlyingImages() {
             const container = document.getElementById('flyingImages');
             const animationClasses = ['float-1', 'float-2', 'float-3'];
+            
+            // Use loaded images if available, otherwise use all
+            const imagesToUse = loadedImages.length > 0 ? loadedImages : memeImages;
             
             // Create a grid-based distribution for better spacing
             const cols = 4;
@@ -781,7 +806,7 @@
             for (let i = 0; i < 12; i++) {
                 const img = document.createElement('img');
                 img.className = 'flying-image ' + animationClasses[i % 3];
-                img.src = memeImages[Math.floor(Math.random() * memeImages.length)];
+                img.src = imagesToUse[Math.floor(Math.random() * imagesToUse.length)];
                 
                 // Calculate grid position with randomness within each cell
                 const gridX = i % cols;
@@ -899,8 +924,10 @@
                 enterBtn.style.cursor = 'pointer';
                 enterBtn.disabled = false;
                 
-                // Create flying images and particles
-                createFlyingImages();
+                // Create flying images if not already created, and particles
+                if (document.getElementById('flyingImages').children.length === 0) {
+                    createFlyingImages();
+                }
                 createParticles();
             });
         });
