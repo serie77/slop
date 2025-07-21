@@ -106,6 +106,47 @@
             box-shadow: 0 0 0 #5FAE24, 0 5px 10px rgba(0,0,0,0.3);
         }
 
+        /* Entrance Social Links */
+        .entrance-social-links {
+            display: flex;
+            gap: 20px;
+            margin-top: 30px;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            position: relative;
+        }
+
+        .entrance-social-btn {
+            width: 50px;
+            height: 50px;
+            background: rgba(121, 214, 45, 0.2);
+            border: 2px solid #79D62D;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: #79D62D;
+            font-size: 1.5rem;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            animation: social-bounce 3s ease-in-out infinite;
+            animation-delay: var(--delay);
+        }
+
+        @keyframes social-bounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-10px) scale(1.1); }
+        }
+
+        .entrance-social-btn:hover {
+            background: #79D62D;
+            color: #0d3b0d;
+            transform: translateY(-5px) scale(1.2);
+            box-shadow: 0 10px 20px rgba(121, 214, 45, 0.3);
+        }
+
         /* Flying Images */
         .flying-image {
             position: absolute;
@@ -587,6 +628,14 @@
         <h1 class="coin-title">SLOP</h1>
         <button class="enter-btn" onclick="enterSite()">Enter the Slop</button>
         
+        <!-- Social Links -->
+        <div class="entrance-social-links">
+            <a href="https://x.com" target="_blank" class="entrance-social-btn" style="--delay: 0s;" title="X (Twitter)">𝕏</a>
+            <a href="https://x.com" target="_blank" class="entrance-social-btn" style="--delay: 0.5s;" title="X Community">👥</a>
+        </div>
+        
+        <div id="loadingProgress" style="color: #79D62D; margin-top: 20px; font-size: 0.9rem; opacity: 0.7;"></div>
+        
         <!-- Flying Images Container -->
         <div id="flyingImages"></div>
     </section>
@@ -607,7 +656,7 @@
                 <div class="ca-section">
                     <div class="ca-label">Contract Address</div>
                     <div class="ca-box">
-                        <span class="ca-address" id="contractAddress">0x1234567890abcdef1234567890abcdef12345678</span>
+                        <span class="ca-address" id="contractAddress">...................................................bonk</span>
                         <button class="copy-btn" onclick="copyCA()">COPY</button>
                     </div>
                 </div>
@@ -677,10 +726,60 @@
             'SLOP/pwease.png'
         ];
 
+        // Preload all images
+        function preloadImages(callback) {
+            let loadedCount = 0;
+            const totalImages = memeImages.length;
+            const progressDiv = document.getElementById('loadingProgress');
+            
+            // Update progress
+            function updateProgress() {
+                const percentage = Math.round((loadedCount / totalImages) * 100);
+                if (progressDiv) {
+                    progressDiv.textContent = `Loading memes... ${percentage}%`;
+                }
+            }
+            
+            memeImages.forEach(src => {
+                const img = new Image();
+                img.onload = () => {
+                    loadedCount++;
+                    updateProgress();
+                    if (loadedCount === totalImages) {
+                        if (progressDiv) {
+                            progressDiv.style.display = 'none';
+                        }
+                        callback();
+                    }
+                };
+                img.onerror = () => {
+                    loadedCount++;
+                    console.warn(`Failed to load image: ${src}`);
+                    updateProgress();
+                    if (loadedCount === totalImages) {
+                        if (progressDiv) {
+                            progressDiv.style.display = 'none';
+                        }
+                        callback();
+                    }
+                };
+                img.src = src;
+            });
+            
+            // Show initial progress
+            updateProgress();
+        }
+
         // Create flying images
         function createFlyingImages() {
             const container = document.getElementById('flyingImages');
             const animationClasses = ['float-1', 'float-2', 'float-3'];
+            
+            // Create a grid-based distribution for better spacing
+            const cols = 4;
+            const rows = 3;
+            const cellWidth = window.innerWidth / cols;
+            const cellHeight = window.innerHeight / rows;
             
             // Create initial batch of images
             for (let i = 0; i < 12; i++) {
@@ -688,9 +787,17 @@
                 img.className = 'flying-image ' + animationClasses[i % 3];
                 img.src = memeImages[Math.floor(Math.random() * memeImages.length)];
                 
-                // Random position within viewport
-                const randomX = Math.random() * (window.innerWidth - 100);
-                const randomY = Math.random() * (window.innerHeight - 100);
+                // Calculate grid position with randomness within each cell
+                const gridX = i % cols;
+                const gridY = Math.floor(i / cols);
+                
+                // Position within grid cell with some randomness
+                const margin = 20; // Minimum margin from cell edges
+                const maxOffsetX = Math.max(cellWidth - 120 - margin, 0);
+                const maxOffsetY = Math.max(cellHeight - 120 - margin, 0);
+                const randomX = (gridX * cellWidth) + margin + (Math.random() * maxOffsetX);
+                const randomY = (gridY * cellHeight) + margin + (Math.random() * maxOffsetY);
+                
                 img.style.left = randomX + 'px';
                 img.style.top = randomY + 'px';
                 
@@ -728,8 +835,16 @@
             }
         }
 
+        // Track if images are loaded
+        let imagesLoaded = false;
+
         // Enter site function
         function enterSite() {
+            // Don't proceed if images aren't loaded
+            if (!imagesLoaded) {
+                return;
+            }
+            
             const entrance = document.getElementById('entrance');
             const main = document.getElementById('main');
             
@@ -770,17 +885,49 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            createFlyingImages();
-            createParticles();
+            // Show loading state
+            const entrance = document.getElementById('entrance');
+            const enterBtn = document.querySelector('.enter-btn');
+            enterBtn.textContent = 'Loading...';
+            enterBtn.style.opacity = '0.5';
+            enterBtn.style.cursor = 'wait';
+            enterBtn.disabled = true;
+            
+            // Preload images then start animations
+            preloadImages(() => {
+                // Mark images as loaded
+                imagesLoaded = true;
+                
+                // Reset button state
+                enterBtn.textContent = 'Enter the Slop';
+                enterBtn.style.opacity = '1';
+                enterBtn.style.cursor = 'pointer';
+                enterBtn.disabled = false;
+                
+                // Create flying images and particles
+                createFlyingImages();
+                createParticles();
+            });
         });
 
-        // Auto-enter after 5 seconds
-        setTimeout(() => {
-            const entrance = document.getElementById('entrance');
-            if (!entrance.classList.contains('hidden')) {
-                enterSite();
-            }
-        }, 5000);
+        // Handle window resize to maintain proper image distribution
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (imagesLoaded) {
+                    // Clear existing images
+                    const container = document.getElementById('flyingImages');
+                    if (container) {
+                        container.innerHTML = '';
+                        // Recreate with new dimensions
+                        createFlyingImages();
+                    }
+                }
+            }, 300);
+        });
+
+        // Auto-enter removed - user must click button
     </script>
 </body>
 </html> 
