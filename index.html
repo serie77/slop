@@ -89,6 +89,7 @@
             z-index: 10;
             position: relative;
             box-shadow: 0 10px 0 #5FAE24, 0 15px 20px rgba(0,0,0,0.3);
+            min-width: 350px;
         }
 
         @keyframes wiggle {
@@ -634,7 +635,7 @@
             <a href="https://x.com" target="_blank" class="entrance-social-btn" style="--delay: 0.5s;" title="X Community">👥</a>
         </div>
         
-        <div id="loadingProgress" style="color: #79D62D; margin-top: 20px; font-size: 0.9rem; opacity: 0.7;"></div>
+
         
         <!-- Flying Images Container -->
         <div id="flyingImages"></div>
@@ -656,7 +657,7 @@
                 <div class="ca-section">
                     <div class="ca-label">Contract Address</div>
                     <div class="ca-box">
-                        <span class="ca-address" id="contractAddress">...................................................bonk</span>
+                        <span class="ca-address" id="contractAddress">...................................................pump</span>
                         <button class="copy-btn" onclick="copyCA()">COPY</button>
                     </div>
                 </div>
@@ -730,13 +731,14 @@
         function preloadImages(callback) {
             let loadedCount = 0;
             const totalImages = memeImages.length;
-            const progressDiv = document.getElementById('loadingProgress');
             
             // Update progress
             function updateProgress() {
                 const percentage = Math.round((loadedCount / totalImages) * 100);
-                if (progressDiv) {
-                    progressDiv.textContent = `Loading memes... ${percentage}%`;
+                const enterBtn = document.querySelector('.enter-btn');
+                
+                if (enterBtn) {
+                    enterBtn.textContent = `Loading memes... ${percentage}%`;
                 }
             }
             
@@ -746,9 +748,6 @@
                     loadedCount++;
                     updateProgress();
                     if (loadedCount === totalImages) {
-                        if (progressDiv) {
-                            progressDiv.style.display = 'none';
-                        }
                         callback();
                     }
                 };
@@ -757,9 +756,6 @@
                     console.warn(`Failed to load image: ${src}`);
                     updateProgress();
                     if (loadedCount === totalImages) {
-                        if (progressDiv) {
-                            progressDiv.style.display = 'none';
-                        }
                         callback();
                     }
                 };
@@ -888,7 +884,6 @@
             // Show loading state
             const entrance = document.getElementById('entrance');
             const enterBtn = document.querySelector('.enter-btn');
-            enterBtn.textContent = 'Loading...';
             enterBtn.style.opacity = '0.5';
             enterBtn.style.cursor = 'wait';
             enterBtn.disabled = true;
